@@ -95,6 +95,24 @@ def context_search(input_keyword):
     # print(ans)
     return ans
 
+def filter(results):
+    values = []
+    for result in results:
+        values.append(result['_id'])
+    query = {
+  "query": {
+    "bool": {
+      
+      "must": [
+        { "ids": { "values":values } }
+      ]
+    }
+  }
+}
+    res = es.search(index="hkdata1", body=query, size=10)
+    ans = res["hits"]["hits"]
+    print("Displayed LLM results")
+    return ans
 
 def printres(data):
     st.subheader("Search Results")
@@ -172,6 +190,8 @@ def main():
         
         prev, _ ,next = st.columns([5, 10, 5])
 
+        st.session_state.check = 0
+
         if st.session_state.page_number < last_page :
             if next.button("Next"):
                 st.session_state.page_number += 1
@@ -181,15 +201,19 @@ def main():
                 st.session_state.page_number -= 1
 
         if st.session_state.page_number > last_page -3:
-            
+            st.subheader("more results")
             if st.session_state.page_number == last_page -2:
-                printres(st.session_state.search_results[:10])
-            else : printres(st.session_state.search_results[10:])
+                printres(filter(st.session_state.search_results[:N+st.session_state.check]))
+            else : printres(filter(st.session_state.search_results[N + st.session_state.check:]))
 
         
         else :
             results = search(st.session_state.search_query,st.session_state.page_number)
             data = results
+            if len(results) < N:
+                st.session_state.check = N - len(results)
+                printres(data)
+                data = st.session_state.search_results[:st.session_state.check]
             printres(data)
                     
 if __name__ == "__main__":
